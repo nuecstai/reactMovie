@@ -11,4 +11,6 @@ export type RootStackParamList = {
   SignUp: undefined;
   ProfileMain: undefined;
   Categories: undefined;
+  Watchlist: undefined;
+  Favorites: undefined;
 }; 

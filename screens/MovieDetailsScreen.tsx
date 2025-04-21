@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import { COLORS, SPACING } from '../constants/Config';
 import { getImageUrl, getSimilarMovies, getMovieCredits } from '../services/tmdb';
@@ -16,6 +17,8 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
+import { useAuth } from '../context/AuthContext';
+import { addToFavorites, removeFromFavorites, addToWatchlist, removeFromWatchlist, getUserFavorites, getUserWatchlist } from '../services/userService';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CAST_ITEM_WIDTH = 80;
@@ -30,6 +33,7 @@ type MovieDetailsScreenProps = {
 
 const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
+  const { user } = useAuth();
   const { movie } = route.params;
   const [similarMovies, setSimilarMovies] = useState<Movie[]>([]);
   const [isLoadingSimilar, setIsLoadingSimilar] = useState(true);
@@ -37,6 +41,7 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
   const [isInWatchlist, setIsInWatchlist] = useState(false);
   const [cast, setCast] = useState<CastMember[]>([]);
   const [loadingCast, setLoadingCast] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     const fetchSimilarMovies = async () => {
@@ -63,22 +68,90 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
       }
     };
 
+    const checkUserLists = async () => {
+      if (user) {
+        try {
+          const favorites = await getUserFavorites(user.uid);
+          const watchlist = await getUserWatchlist(user.uid);
+          setIsFavorite(favorites.some((fav: Movie) => fav.id === movie.id));
+          setIsInWatchlist(watchlist.some((item: Movie) => item.id === movie.id));
+        } catch (error) {
+          console.error('Error checking user lists:', error);
+        }
+      }
+    };
+
     fetchSimilarMovies();
     fetchCast();
-  }, [movie.id]);
+    checkUserLists();
+  }, [movie.id, user]);
 
   const handleMoviePress = (movie: Movie) => {
     navigation.navigate('MovieDetails', { movie });
   };
 
-  const toggleFavorite = () => {
-    setIsFavorite(!isFavorite);
-    // TODO: Implement actual favorite functionality
+  const toggleFavorite = async () => {
+    if (!user) {
+      Alert.alert(
+        "Login Required",
+        "Please log in to add movies to your favorites.",
+        [
+          {
+            text: "OK",
+            style: "cancel"
+          }
+        ]
+      );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      if (isFavorite) {
+        await removeFromFavorites(user.uid, movie.id);
+        setIsFavorite(false);
+      } else {
+        await addToFavorites(user.uid, movie);
+        setIsFavorite(true);
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      Alert.alert("Error", "Failed to update favorites. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const toggleWatchlist = () => {
-    setIsInWatchlist(!isInWatchlist);
-    // TODO: Implement actual watchlist functionality
+  const toggleWatchlist = async () => {
+    if (!user) {
+      Alert.alert(
+        "Login Required",
+        "Please log in to add movies to your watchlist.",
+        [
+          {
+            text: "OK",
+            style: "cancel"
+          }
+        ]
+      );
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      if (isInWatchlist) {
+        await removeFromWatchlist(user.uid, movie.id);
+        setIsInWatchlist(false);
+      } else {
+        await addToWatchlist(user.uid, movie);
+        setIsInWatchlist(true);
+      }
+    } catch (error) {
+      console.error('Error toggling watchlist:', error);
+      Alert.alert("Error", "Failed to update watchlist. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const renderMovieCard = (item: Movie) => (
