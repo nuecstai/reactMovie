@@ -1,57 +1,48 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   ScrollView,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SPACING } from '../constants/Config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../context/AuthContext';
+import { auth } from '../config/firebase';
 
 type RootStackParamList = {
   Login: undefined;
+  Watchlist: undefined;
+  Favorites: undefined;
 };
 
-type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Login'>;
+type ProfileScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const ProfileScreen = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userName, setUserName] = useState('');
+  const { user, loading } = useAuth();
   const navigation = useNavigation<ProfileScreenNavigationProp>();
-
-  useEffect(() => {
-    checkLoginStatus();
-  }, []);
-
-  const checkLoginStatus = async () => {
-    try {
-      const userData = await AsyncStorage.getItem('userData');
-      if (userData) {
-        const { name } = JSON.parse(userData);
-        setUserName(name);
-        setIsLoggedIn(true);
-      }
-    } catch (error) {
-      console.error('Error checking login status:', error);
-    }
-  };
 
   const handleLogout = async () => {
     try {
-      await AsyncStorage.removeItem('userData');
-      setIsLoggedIn(false);
-      setUserName('');
+      await auth.signOut();
     } catch (error) {
       console.error('Error logging out:', error);
     }
   };
 
-  if (!isLoggedIn) {
+  if (loading) {
+    return (
+      <View style={styles.container}>
+        <ActivityIndicator size="large" color={COLORS.accent} />
+      </View>
+    );
+  }
+
+  if (!user) {
     return (
       <View style={styles.container}>
         <View style={styles.loginContainer}>
@@ -75,18 +66,24 @@ const ProfileScreen = () => {
           <View style={styles.avatarContainer}>
             <Icon name="person-circle" size={80} color={COLORS.accent} />
           </View>
-          <Text style={styles.userName}>{userName}</Text>
+          <Text style={styles.userName}>Hello, {user.email?.split('@')[0]}!</Text>
         </View>
       </View>
 
       <View style={styles.section}>
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('Favorites')}
+        >
           <Icon name="heart" size={24} color={COLORS.accent} />
           <Text style={styles.menuItemText}>Favorites</Text>
           <Icon name="chevron-forward" size={24} color={COLORS.textSecondary} />
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.menuItem}>
+        <TouchableOpacity 
+          style={styles.menuItem}
+          onPress={() => navigation.navigate('Watchlist')}
+        >
           <Icon name="bookmark" size={24} color={COLORS.accent} />
           <Text style={styles.menuItemText}>Watchlist</Text>
           <Icon name="chevron-forward" size={24} color={COLORS.textSecondary} />

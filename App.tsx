@@ -4,6 +4,7 @@ import { StatusBar } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './navigation/AppNavigator';
 import { COLORS } from './constants/Config';
+import { AuthProvider } from './context/AuthContext';
 
 export default function App() {
   return (
@@ -12,7 +13,9 @@ export default function App() {
         barStyle="light-content"
         backgroundColor={COLORS.primary}
       />
-      <AppNavigator />
+      <AuthProvider>
+        <AppNavigator />
+      </AuthProvider>
     </SafeAreaProvider>
   );
 } 

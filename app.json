@@ -19,7 +19,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#121212"
-      }
+      },
+      "package": "com.anonymous.reMovie"
     },
     "web": {
       "bundler": "metro",

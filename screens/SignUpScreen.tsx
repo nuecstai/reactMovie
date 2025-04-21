@@ -6,10 +6,12 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { COLORS, SPACING } from '../constants/Config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { auth } from '../config/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 type SignUpScreenNavigationProp = {
   navigate: (screen: string) => void;
@@ -19,6 +21,7 @@ const SignUpScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation<SignUpScreenNavigationProp>();
 
   const handleSignUp = async () => {
@@ -38,18 +41,22 @@ const SignUpScreen = () => {
     }
 
     try {
-      // In a real app, you would send this to your backend
-      const userData = {
-        email,
-        name: email.split('@')[0], // Using email username as name for demo
-      };
-
-      await AsyncStorage.setItem('userData', JSON.stringify(userData));
+      setLoading(true);
+      await createUserWithEmailAndPassword(auth, email, password);
       Alert.alert('Success', 'Account created successfully!');
       navigation.navigate('Login');
-    } catch (error) {
-      console.error('Error signing up:', error);
-      Alert.alert('Error', 'Failed to create account. Please try again.');
+    } catch (error: any) {
+      let errorMessage = 'Failed to create account. Please try again.';
+      if (error.code === 'auth/email-already-in-use') {
+        errorMessage = 'Email is already in use';
+      } else if (error.code === 'auth/invalid-email') {
+        errorMessage = 'Invalid email address';
+      } else if (error.code === 'auth/weak-password') {
+        errorMessage = 'Password is too weak';
+      }
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -86,8 +93,16 @@ const SignUpScreen = () => {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.signUpButton} onPress={handleSignUp}>
-          <Text style={styles.signUpButtonText}>Sign Up</Text>
+        <TouchableOpacity 
+          style={[styles.signUpButton, loading && styles.disabledButton]} 
+          onPress={handleSignUp}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={COLORS.text} />
+          ) : (
+            <Text style={styles.signUpButtonText}>Sign Up</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -131,6 +146,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: SPACING.md,
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   signUpButtonText: {
     color: COLORS.text,

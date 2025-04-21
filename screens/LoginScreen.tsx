@@ -6,18 +6,21 @@ import {
   TextInput,
   TouchableOpacity,
   Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { COLORS, SPACING } from '../constants/Config';
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
+import { auth } from '../config/firebase';
+import { signInWithEmailAndPassword } from 'firebase/auth';
+import { RootStackParamList } from '../navigation/types';
+import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 
-type LoginScreenNavigationProp = {
-  navigate: (screen: string) => void;
-};
+type LoginScreenNavigationProp = NativeStackNavigationProp<RootStackParamList>;
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
   const navigation = useNavigation<LoginScreenNavigationProp>();
 
   const handleLogin = async () => {
@@ -27,27 +30,38 @@ const LoginScreen = () => {
     }
 
     try {
-      // In a real app, you would verify credentials with your backend
-      const userData = await AsyncStorage.getItem('userData');
+      setLoading(true);
+      console.log('Attempting to login with:', email);
+      await signInWithEmailAndPassword(auth, email, password);
+      console.log('Login successful');
+      navigation.goBack();
+    } catch (error: any) {
+      console.error('Login error:', error.code, error.message);
+      let errorMessage = 'Failed to login. Please try again.';
       
-      if (!userData) {
-        Alert.alert('Error', 'No account found. Please sign up first.');
-        return;
+      switch (error.code) {
+        case 'auth/user-not-found':
+          errorMessage = 'No account found with this email.';
+          break;
+        case 'auth/wrong-password':
+          errorMessage = 'Incorrect password.';
+          break;
+        case 'auth/invalid-email':
+          errorMessage = 'Invalid email address.';
+          break;
+        case 'auth/too-many-requests':
+          errorMessage = 'Too many failed attempts. Please try again later.';
+          break;
+        case 'auth/network-request-failed':
+          errorMessage = 'Network error. Please check your internet connection.';
+          break;
+        default:
+          errorMessage = `Login failed: ${error.message}`;
       }
-
-      const parsedData = JSON.parse(userData);
       
-      if (parsedData.email !== email) {
-        Alert.alert('Error', 'Invalid email or password');
-        return;
-      }
-
-      // In a real app, you would verify the password with your backend
-      Alert.alert('Success', 'Logged in successfully!');
-      navigation.navigate('Home');
-    } catch (error) {
-      console.error('Error logging in:', error);
-      Alert.alert('Error', 'Failed to login. Please try again.');
+      Alert.alert('Error', errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -75,8 +89,16 @@ const LoginScreen = () => {
           secureTextEntry
         />
 
-        <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-          <Text style={styles.loginButtonText}>Login</Text>
+        <TouchableOpacity 
+          style={[styles.loginButton, loading && styles.disabledButton]} 
+          onPress={handleLogin}
+          disabled={loading}
+        >
+          {loading ? (
+            <ActivityIndicator color={COLORS.text} />
+          ) : (
+            <Text style={styles.loginButtonText}>Login</Text>
+          )}
         </TouchableOpacity>
 
         <TouchableOpacity
@@ -120,6 +142,9 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: SPACING.md,
+  },
+  disabledButton: {
+    opacity: 0.7,
   },
   loginButtonText: {
     color: COLORS.text,

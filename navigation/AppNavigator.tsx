@@ -11,8 +11,11 @@ import LoginScreen from '../screens/LoginScreen';
 import SignUpScreen from '../screens/SignUpScreen';
 import MovieDetailsScreen from '../screens/MovieDetailsScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
+import FavoritesScreen from '../screens/FavoritesScreen';
+import WatchlistScreen from '../screens/WatchlistScreen';
 import { RootStackParamList } from './types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
+import { useAuth } from '../context/AuthContext';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator<RootStackParamList>();
@@ -90,6 +93,8 @@ const SearchStack = () => {
 };
 
 const ProfileStack = () => {
+  const { user } = useAuth();
+  
   return (
     <Stack.Navigator>
       <Stack.Screen 
@@ -97,15 +102,65 @@ const ProfileStack = () => {
         component={ProfileScreen} 
         options={{ headerShown: false }}
       />
+      {!user && (
+        <>
+          <Stack.Screen 
+            name="Login" 
+            component={LoginScreen} 
+            options={{ 
+              title: 'Login',
+              headerStyle: {
+                backgroundColor: COLORS.primary,
+              },
+              headerTintColor: COLORS.text,
+              headerTitleStyle: {
+                color: COLORS.text,
+              },
+            }}
+          />
+          <Stack.Screen 
+            name="SignUp" 
+            component={SignUpScreen} 
+            options={{ 
+              title: 'Sign Up',
+              headerStyle: {
+                backgroundColor: COLORS.primary,
+              },
+              headerTintColor: COLORS.text,
+              headerTitleStyle: {
+                color: COLORS.text,
+              },
+            }}
+          />
+        </>
+      )}
       <Stack.Screen 
-        name="Login" 
-        component={LoginScreen} 
-        options={{ title: 'Login' }}
+        name="Favorites" 
+        component={FavoritesScreen}
+        options={{
+          title: 'Favorites',
+          headerStyle: {
+            backgroundColor: COLORS.primary,
+          },
+          headerTintColor: COLORS.text,
+          headerTitleStyle: {
+            color: COLORS.text,
+          },
+        }}
       />
       <Stack.Screen 
-        name="SignUp" 
-        component={SignUpScreen} 
-        options={{ title: 'Sign Up' }}
+        name="Watchlist" 
+        component={WatchlistScreen}
+        options={{
+          title: 'Watchlist',
+          headerStyle: {
+            backgroundColor: COLORS.primary,
+          },
+          headerTintColor: COLORS.text,
+          headerTitleStyle: {
+            color: COLORS.text,
+          },
+        }}
       />
       <Stack.Screen 
         name="MovieDetails" 
@@ -123,6 +178,8 @@ const ProfileStack = () => {
 };
 
 const AppNavigator = () => {
+  const { user } = useAuth();
+
   return (
     <NavigationContainer>
       <Tab.Navigator
