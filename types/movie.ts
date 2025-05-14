@@ -24,5 +24,14 @@ export interface CastMember {
 
 export interface MovieCredits {
   cast: CastMember[];
-  crew: any[]; // You can type this more specifically if needed
-} 
+  crew: any[];
+}
+
+export interface Review {
+  id: string;
+  userId: string;
+  username: string;
+  rating: number; // 1-5
+  text: string;
+  createdAt: number; // timestamp
+}

@@ -11,6 +11,7 @@ export const COLORS = {
   background: '#121212',
   card: '#1e1e1e',
   border: '#333333',
+  danger: '#FF3B30',
 };
 
 export const FONTS = {
@@ -24,4 +25,4 @@ export const SPACING = {
   md: 16,
   lg: 24,
   xl: 32,
-}; 
+};
