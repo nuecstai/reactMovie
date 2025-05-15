@@ -3,6 +3,7 @@ import { getAuth } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence, FirestoreError, initializeFirestore, CACHE_SIZE_UNLIMITED } from 'firebase/firestore';
 import { Platform } from 'react-native';
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
   apiKey: "",
   authDomain: "",
@@ -19,7 +20,6 @@ const auth = getAuth(app);
 // Initialize Firestore with specific settings
 const db = initializeFirestore(app, {
   cacheSizeBytes: CACHE_SIZE_UNLIMITED,
-  experimentalForceLongPolling: true,
   experimentalAutoDetectLongPolling: true
 });
 

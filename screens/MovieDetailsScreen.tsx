@@ -10,9 +10,10 @@ import {
   ActivityIndicator,
   Alert,
   TextInput,
+  Modal,
 } from 'react-native';
 import { COLORS, SPACING } from '../constants/Config';
-import { getImageUrl, getSimilarMovies, getMovieCredits } from '../services/tmdb';
+import { getImageUrl, getSimilarMovies, getMovieCredits, getMovieVideos, getMovieImages } from '../services/tmdb';
 import { Movie, CastMember, Review } from '../types/movie';
 import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
@@ -20,6 +21,7 @@ import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { addToFavorites, removeFromFavorites, addToWatchlist, removeFromWatchlist, getUserFavorites, getUserWatchlist, addReview, editReview, deleteReview, getReviews } from '../services/userService';
+import YoutubePlayer from 'react-native-youtube-iframe';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CAST_ITEM_WIDTH = 80;
@@ -46,6 +48,10 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [userReview, setUserReview] = useState<{ rating: number; text: string }>({ rating: 0, text: '' });
   const [isEditing, setIsEditing] = useState(false);
+  const [videos, setVideos] = useState<any[]>([]);
+  const [images, setImages] = useState<any>({ backdrops: [], posters: [] });
+  const [loadingMedia, setLoadingMedia] = useState(true);
+  const [trailerVisible, setTrailerVisible] = useState(false);
 
   useEffect(() => {
     const fetchSimilarMovies = async () => {
@@ -64,7 +70,7 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
       try {
         setLoadingCast(true);
         const credits = await getMovieCredits(movie.id);
-        setCast(credits.cast.slice(0, 10)); // Get top 10 cast members
+        setCast(credits.cast.slice(0, 10));
       } catch (error) {
         console.error('Error fetching cast:', error);
       } finally {
@@ -102,10 +108,27 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
       } catch (e) { console.error('Error fetching reviews:', e); }
     };
 
+    const fetchMedia = async () => {
+      try {
+        setLoadingMedia(true);
+        const [vids, imgs] = await Promise.all([
+          getMovieVideos(movie.id),
+          getMovieImages(movie.id),
+        ]);
+        setVideos(vids);
+        setImages(imgs);
+      } catch (e) {
+        console.error('Error fetching media:', e);
+      } finally {
+        setLoadingMedia(false);
+      }
+    };
+
     fetchSimilarMovies();
     fetchCast();
     checkUserLists();
     fetchReviews();
+    fetchMedia();
   }, [movie.id, user]);
 
   const handleMoviePress = (movie: Movie) => {
@@ -226,12 +249,76 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
     </View>
   );
 
+  // Helper to pick the best trailer
+  const getBestTrailer = (videos: any[]) => {
+    if (!videos) return null;
+    // Prefer official trailers
+    const official = videos.find(v => v.site === 'YouTube' && v.type === 'Trailer' && v.official);
+    if (official) return official;
+    // Next, look for a YouTube video with 'official trailer' in the name
+    const named = videos.find(v => v.site === 'YouTube' && v.type === 'Trailer' && v.name.toLowerCase().includes('official trailer'));
+    if (named) return named;
+    // Next, any YouTube trailer
+    const anyTrailer = videos.find(v => v.site === 'YouTube' && v.type === 'Trailer');
+    if (anyTrailer) return anyTrailer;
+    // Fallback: any YouTube video
+    return videos.find(v => v.site === 'YouTube');
+  };
+
   return (
     <ScrollView style={styles.container}>
-      <Image
-        source={{ uri: getImageUrl(movie.backdrop_path, 'original') }}
-        style={styles.backdrop}
-      />
+      <View style={styles.backdropContainer}>
+        <Image
+          source={{ uri: getImageUrl(movie.backdrop_path, 'original') }}
+          style={styles.backdrop}
+        />
+        {/* Overlayed Trailer Button */}
+        {(() => {
+          const trailer = getBestTrailer(videos);
+          if (!trailer) return null;
+          return (
+            <TouchableOpacity
+              style={styles.overlayTrailerButton}
+              onPress={() => setTrailerVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Icon name="play-circle" size={32} color={COLORS.accent} style={styles.overlayPlayIcon} />
+              <Text style={styles.overlayTrailerText}>Watch Trailer</Text>
+            </TouchableOpacity>
+          );
+        })()}
+      </View>
+      {/* Trailer Modal */}
+      {(() => {
+        const trailer = getBestTrailer(videos);
+        if (!trailer) return null;
+        return (
+          <Modal
+            visible={trailerVisible}
+            animationType="slide"
+            transparent={true}
+            onRequestClose={() => setTrailerVisible(false)}
+          >
+            <View style={styles.modalOverlay}>
+              <View style={styles.modalContent}>
+                <TouchableOpacity style={styles.closeButton} onPress={() => setTrailerVisible(false)}>
+                  <Icon name="close" size={28} color={COLORS.text} />
+                </TouchableOpacity>
+                <YoutubePlayer
+                  height={220}
+                  width={340}
+                  play={trailerVisible}
+                  videoId={trailer.key}
+                  onChangeState={event => {
+                    if (event === 'ended') setTrailerVisible(false);
+                  }}
+                />
+              </View>
+            </View>
+          </Modal>
+        );
+      })()}
+      
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>{movie.title}</Text>
@@ -276,6 +363,23 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
           <Text style={styles.overviewTitle}>Overview</Text>
           <Text style={styles.overview}>{movie.overview}</Text>
         </View>
+
+        {/* Image Gallery Section */}
+      {loadingMedia ? null : images && images.backdrops && images.backdrops.length > 0 ? (
+        <View style={{ marginBottom: 16 }}>
+          <Text style={styles.sectionTitle}>Gallery</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 8 }}>
+            {images.backdrops.slice(0, 10).map((img: any, idx: number) => (
+              <Image
+                key={idx}
+                source={{ uri: getImageUrl(img.file_path, 'w500') }}
+                style={{ width: 180, height: 100, borderRadius: 8, marginRight: 10 }}
+                resizeMode="cover"
+              />
+            ))}
+          </ScrollView>
+        </View>
+      ) : null}
 
         <View style={styles.castContainer}>
           <Text style={styles.sectionTitle}>Cast</Text>
@@ -372,10 +476,36 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: COLORS.background,
   },
+  backdropContainer: {
+    position: 'relative',
+  },
   backdrop: {
     width: screenWidth,
     height: screenWidth * 0.6,
     resizeMode: 'cover',
+  },
+  overlayTrailerButton: {
+    position: 'absolute',
+    bottom: 20,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    borderRadius: 24,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+  },
+  overlayPlayIcon: {
+    marginRight: 6,
+    fontSize: 32,
+  },
+  overlayTrailerText: {
+    color: COLORS.accent,
+    fontSize: 16,
+    fontWeight: 'bold',
+    textShadowColor: COLORS.background,
+    textShadowOffset: { width: 1, height: 1 },
+    textShadowRadius: 4,
   },
   content: {
     padding: SPACING.md,
@@ -603,6 +733,72 @@ const styles = StyleSheet.create({
     marginTop: SPACING.xs,
     fontSize: 14,
     width: 150,
+  },
+  trailerSection: {
+    marginBottom: SPACING.lg,
+    paddingHorizontal: SPACING.md,
+  },
+  trailerCard: {
+    backgroundColor: COLORS.card,
+    borderRadius: 16,
+    overflow: 'hidden',
+    shadowColor: COLORS.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 4,
+    alignItems: 'center',
+  },
+  trailerButtonSection: {
+    alignItems: 'center',
+    marginVertical: SPACING.md,
+  },
+  trailerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: COLORS.card,
+    borderRadius: 24,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    shadowColor: COLORS.text,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.10,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  trailerButtonText: {
+    color: COLORS.accent,
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  modalContent: {
+    width: '100%',
+    maxWidth: 500,
+    backgroundColor: COLORS.background,
+    borderRadius: 16,
+    overflow: 'hidden',
+    alignItems: 'center',
+    padding: 0,
+  },
+  closeButton: {
+    alignSelf: 'flex-end',
+    padding: 10,
+    zIndex: 2,
+  },
+  trailerWebview: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    minHeight: 200,
+    maxHeight: 300,
+    borderRadius: 12,
+    backgroundColor: COLORS.background,
+    marginBottom: 16,
   },
 });
 

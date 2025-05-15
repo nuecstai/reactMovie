@@ -114,3 +114,23 @@ export const getTrendingMovies = async (): Promise<Movie[]> => {
     throw error;
   }
 };
+
+export const getMovieVideos = async (movieId: number): Promise<any[]> => {
+  try {
+    const response = await tmdbApi.get<{ results: any[] }>(`/movie/${movieId}/videos`);
+    return response.data.results;
+  } catch (error) {
+    console.error('Error fetching movie videos:', error);
+    throw error;
+  }
+};
+
+export const getMovieImages = async (movieId: number): Promise<any> => {
+  try {
+    const response = await tmdbApi.get<any>(`/movie/${movieId}/images`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching movie images:', error);
+    throw error;
+  }
+};
