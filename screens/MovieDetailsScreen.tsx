@@ -22,6 +22,7 @@ import { RootStackParamList } from '../navigation/types';
 import { useAuth } from '../context/AuthContext';
 import { addToFavorites, removeFromFavorites, addToWatchlist, removeFromWatchlist, getUserFavorites, getUserWatchlist, addReview, editReview, deleteReview, getReviews } from '../services/userService';
 import YoutubePlayer from 'react-native-youtube-iframe';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width: screenWidth } = Dimensions.get('window');
 const CAST_ITEM_WIDTH = 80;
@@ -129,6 +130,22 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
     checkUserLists();
     fetchReviews();
     fetchMedia();
+
+    // Save to recently viewed
+    (async () => {
+      try {
+        const key = 'recently_viewed_movies';
+        const stored = await AsyncStorage.getItem(key);
+        let recent: Movie[] = stored ? JSON.parse(stored) : [];
+        // Remove if already exists
+        recent = recent.filter(m => m.id !== movie.id);
+        // Add to front
+        recent.unshift(movie);
+        // Limit to 10
+        if (recent.length > 10) recent = recent.slice(0, 10);
+        await AsyncStorage.setItem(key, JSON.stringify(recent));
+      } catch (e) { console.error('Error saving recently viewed:', e); }
+    })();
   }, [movie.id, user]);
 
   const handleMoviePress = (movie: Movie) => {
@@ -337,7 +354,7 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
             <Icon 
               name={isFavorite ? "heart" : "heart-outline"} 
               size={24} 
-              color={isFavorite ? COLORS.accent : COLORS.text} 
+              color={isFavorite ? '#FFD700' : COLORS.text}
             />
             <Text style={[styles.actionButtonText, isFavorite && styles.activeButtonText]}>
               Favorite
@@ -351,7 +368,7 @@ const MovieDetailsScreen = ({ route }: MovieDetailsScreenProps) => {
             <Icon 
               name={isInWatchlist ? "bookmark" : "bookmark-outline"} 
               size={24} 
-              color={isInWatchlist ? COLORS.accent : COLORS.text} 
+              color={isInWatchlist ? '#FFD700' : COLORS.text}
             />
             <Text style={[styles.actionButtonText, isInWatchlist && styles.activeButtonText]}>
               Watchlist

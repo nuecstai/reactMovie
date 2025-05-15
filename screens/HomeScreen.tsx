@@ -16,8 +16,7 @@ import Icon from 'react-native-vector-icons/Ionicons';
 import { useNavigation } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../navigation/types';
-
-const { width: screenWidth } = Dimensions.get('window');
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 type HomeScreenNavigationProp = NativeStackNavigationProp<RootStackParamList, 'Home'>;
 
@@ -26,6 +25,7 @@ const HomeScreen = () => {
   const [popularMovies, setPopularMovies] = useState<Movie[]>([]);
   const [topRatedMovies, setTopRatedMovies] = useState<Movie[]>([]);
   const [upcomingMovies, setUpcomingMovies] = useState<Movie[]>([]);
+  const [recentlyViewed, setRecentlyViewed] = useState<Movie[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentIndex, setCurrentIndex] = useState(0);
 
@@ -38,9 +38,8 @@ const HomeScreen = () => {
           getTopRatedMovies(),
           getUpcomingMovies(),
         ]);
-        // Limit popular movies to 8
         setPopularMovies(popular.slice(0, 8));
-        setTopRatedMovies(topRated);
+        setTopRatedMovies(topRated.results);
         setUpcomingMovies(upcoming);
       } catch (error) {
         console.error('Error fetching movies:', error);
@@ -63,6 +62,19 @@ const HomeScreen = () => {
       return () => clearInterval(interval);
     }
   }, [popularMovies]);
+
+  useEffect(() => {
+    const loadRecentlyViewed = async () => {
+      try {
+        const key = 'recently_viewed_movies';
+        const stored = await AsyncStorage.getItem(key);
+        setRecentlyViewed(stored ? JSON.parse(stored) : []);
+      } catch (e) { console.error('Error loading recently viewed:', e); }
+    };
+    loadRecentlyViewed();
+    const unsubscribe = navigation.addListener('focus', loadRecentlyViewed);
+    return unsubscribe;
+  }, [navigation]);
 
   const handlePrevious = () => {
     setCurrentIndex((prevIndex) => 
@@ -166,7 +178,16 @@ const HomeScreen = () => {
 
       {topRatedMovies.length > 0 && (
         <View style={styles.topRatedContainer}>
-          <Text style={styles.sectionTitle}>Top Rated Movies</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: SPACING.md }}>
+            <Text style={[styles.sectionTitle, { marginBottom: 0 }]}>Top Rated Movies</Text>
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', paddingTop: 2 }}
+              onPress={() => navigation.navigate('TopRated')}
+            >
+              <Text style={{ color: COLORS.accent, fontWeight: 'bold', fontSize: 16, marginRight: 4, lineHeight: 24 }}>See More</Text>
+              <Icon name="chevron-forward" size={18} color={COLORS.accent} />
+            </TouchableOpacity>
+          </View>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -186,6 +207,19 @@ const HomeScreen = () => {
             contentContainerStyle={styles.horizontalScroll}
           >
             {upcomingMovies.map(renderMovieCard)}
+          </ScrollView>
+        </View>
+      )}
+
+      {recentlyViewed.length > 0 && (
+        <View style={styles.topRatedContainer}>
+          <Text style={styles.sectionTitle}>Recently Viewed</Text>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.horizontalScroll}
+          >
+            {recentlyViewed.map(renderMovieCard)}
           </ScrollView>
         </View>
       )}
@@ -332,4 +366,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default HomeScreen; 
+export default HomeScreen;

@@ -13,4 +13,5 @@ export type RootStackParamList = {
   Categories: undefined;
   Watchlist: undefined;
   Favorites: undefined;
-}; 
+  TopRated: undefined;
+};

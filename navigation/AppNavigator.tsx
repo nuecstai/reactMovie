@@ -13,6 +13,7 @@ import MovieDetailsScreen from '../screens/MovieDetailsScreen';
 import CategoriesScreen from '../screens/CategoriesScreen';
 import FavoritesScreen from '../screens/FavoritesScreen';
 import WatchlistScreen from '../screens/WatchlistScreen';
+import TopRatedScreen from '../screens/TopRatedScreen';
 import { RootStackParamList } from './types';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { useAuth } from '../context/AuthContext';
@@ -63,6 +64,17 @@ const HomeStack = () => {
           },
           headerTintColor: COLORS.text,
           headerTitle: 'Categories',
+        }}
+      />
+      <Stack.Screen 
+        name="TopRated" 
+        component={TopRatedScreen}
+        options={{
+          headerStyle: {
+            backgroundColor: COLORS.primary,
+          },
+          headerTintColor: COLORS.text,
+          headerTitle: 'Top Rated Movies',
         }}
       />
     </Stack.Navigator>
@@ -225,4 +237,4 @@ const AppNavigator = () => {
   );
 };
 
-export default AppNavigator; 
+export default AppNavigator;

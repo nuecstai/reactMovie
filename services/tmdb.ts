@@ -20,10 +20,12 @@ export const getPopularMovies = async () => {
   }
 };
 
-export const getTopRatedMovies = async () => {
+export const getTopRatedMovies = async (page: number = 1) => {
   try {
-    const response = await tmdbApi.get<MovieResponse>('/movie/top_rated');
-    return response.data.results;
+    const response = await tmdbApi.get<MovieResponse>('/movie/top_rated', {
+      params: { page },
+    });
+    return response.data;
   } catch (error) {
     console.error('Error fetching top rated movies:', error);
     throw error;
