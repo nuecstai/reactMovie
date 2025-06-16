@@ -188,11 +188,6 @@ This app requires several environment variables to function properly. A template
 ### Security Note
 ⚠️ **Never commit your `.env` file to version control.** It contains sensitive API keys and should be kept private.
 
-## Documentation
-
-- [DEPLOYMENT.md](DEPLOYMENT.md) - Detailed deployment and build instructions
-- [SECURITY.md](SECURITY.md) - Security best practices and setup guide
-
 ## Contributing
 
 1. Fork the repository
