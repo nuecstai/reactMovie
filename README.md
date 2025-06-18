@@ -1,1 +1,4 @@
-https://youtube.com/shorts/opbI0mAs1eY?feature=share
+Uygulamanın kaynak kodları 'removie' klasorü içerisindedir. Klasörde projeyi anlatan detaylı bir README.md bulunmaktadır.
+
+
+Uygulamanın çalışır apk dosyasına [GitHub Releases](https://github.com/nuecstai/reactMovie/releases) üzerinden ulaşabilirsiniz.
